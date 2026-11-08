@@ -1,0 +1,40 @@
+name: Dictionary check
+
+# Compares the study data with the latest JMdict and KANJIDIC each month, as the dictionary license
+# asks. A difference opens one issue. If the check itself can't run, this workflow fails, and GitHub
+# emails the owner.
+on:
+  schedule:
+    - cron: '17 6 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Not in rosslevinsky/kanji-families, which has no secrets. A fork runs this once it has its own.
+    if: github.repository != 'rosslevinsky/kanji-families'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: 22
+      - name: Compare, and open an issue for any difference
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Study data differs from the latest dictionary files
+        run: |
+          code=0
+          npm run -s check:dictionary -- "$RUNNER_TEMP/report.md" || code=$?
+          # 0 means a match and 1 a difference. Anything else means the check didn't finish.
+          if [ "$code" = 0 ]; then exit 0; fi
+          if [ "$code" != 1 ]; then exit 1; fi
+          open="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq 'length')"
+          if [ "$open" = 0 ]; then gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/report.md"; fi

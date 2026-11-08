@@ -1,0 +1,30 @@
+{
+  "name": "kanji-families",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kanji Family Drills: a study guide and drill app for phono-semantic kanji.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "dev": "wrangler dev --port 8787 --infer-origin-from-routes=false",
+    "dev:e2e": "node scripts/dev-e2e.js",
+    "db:reset": "node scripts/db-reset.js",
+    "db:migrate:prod": "wrangler d1 migrations apply DB --remote",
+    "deploy": "wrangler deploy",
+    "check:dictionary": "node scripts/check-dictionary.js",
+    "test": "vitest run",
+    "test:e2e": "playwright test --project=desktop --project=mobile",
+    "test:e2e:browsers": "playwright test --project=desktop-firefox --project=desktop-webkit --project=mobile-webkit"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.12",
+    "@playwright/test": "1.61.1",
+    "fast-check": "4.10.2",
+    "vitest": "4.1.12",
+    "wrangler": "4.156.1"
+  }
+}

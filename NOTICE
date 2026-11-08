@@ -1,0 +1,56 @@
+Kanji Family Drills
+Copyright 2026 Ross Levinsky
+
+The code is licensed under the Apache License, Version 2.0 (see LICENSE).
+The study data in public/data.js is licensed under CC BY-SA 4.0 (see LICENSE-DATA).
+
+
+DATA SOURCES
+
+Each source is recorded as "copied" (its material may be in public/data.js) or
+"checked against" (used to verify the data; none of its material is included).
+The reasons below come from how the data was built and from comparing
+public/data.js with the packages named on 2026-11-02.
+
+JMdict/EDICT: copied
+  Every common word and reading was checked against JMdict-derived word files.
+  Where the English meanings came from is not recorded. All 581 distinct
+  word and reading pairs in the data are in those files, and 396 of the English
+  meanings equal a JMdict gloss word for word, so this is treated as copied. EDRDG's
+  license names vocabulary lists as an example of a significant extract.
+  Reached through: npm kanji-data 1.1.0 (MIT), from kanjiapi.dev (MIT).
+  Terms: https://www.edrdg.org/edrdg/licence.html (CC BY-SA 4.0)
+  Project: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
+
+KANJIDIC: copied
+  Readings and jouyou status were checked against KANJIDIC, and the second readings
+  were hand-picked, leaving out rarer ones it lists. 149 of the 239 family-member
+  meanings equal a KANJIDIC meaning word for word. Most are single common words, so
+  this does not prove copying, but independent origin cannot be shown either, so this
+  is treated as copied. The data holds on'yomi and English meanings only, and none of
+  the contributed fields listed in section 8 of the license (such as SKIP codes).
+  Reached through: npm kanji-data 1.1.0 (MIT), from kanjiapi.dev (MIT).
+  Terms: https://www.edrdg.org/edrdg/licence.html (CC BY-SA 4.0)
+  Project: https://www.edrdg.org/wiki/index.php/KANJIDIC_Project
+
+Updating: EDRDG's license asks for a regular way to update from the latest files.
+  .github/workflows/dictionary-check.yml compares the words and readings in the data
+  with the latest JMdict and KANJIDIC each month and opens an issue for any difference,
+  which is reviewed by hand. English meanings are hand-edited and are not compared.
+
+KanjiVG: checked against
+  Component trees were used only to confirm that a kanji contains its sound part,
+  which led to corrections such as removing a kanji from a family. public/data.js holds no
+  strokes, drawings or trees.
+  Reached through: npm kanji 0.19.3 (MPL-2.0), whose trees are generated from KanjiVG.
+  KanjiVG is copyright (c) 2009-2026 Ulrich Apel, released under CC BY-SA 3.0.
+  https://kanjivg.tagaini.net/
+
+The kanji-data and kanji packages were used as checking tools. They are not
+dependencies of this project and no package code is included.
+
+
+FONTS
+
+Klee One, Shippori Mincho B1 and Zen Kaku Gothic New are loaded from Google Fonts,
+under the SIL Open Font License. They are not stored in this repository.

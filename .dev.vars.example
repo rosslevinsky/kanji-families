@@ -1,0 +1,29 @@
+# Local settings. `npm run setup` copies this file to .dev.vars, which git ignores, and fills in
+# SESSION_KEY. Never put real production secrets here.
+
+# The address you open the site at. Change it if you use another port or a proxy address.
+APP_URL=http://localhost:8787
+
+# The key that signs login sessions: at least 32 characters. Setup generates one.
+SESSION_KEY=
+
+# Turns on the local fake login. It must never be set on the deployed site.
+DEV_LOGIN=1
+
+# Optional: real Google login. Without these the site works and the Google sign-in is reported as
+# unavailable, so most people can leave them unset and use the fake login above.
+#
+# 1. In the Google Cloud console, create an OAuth client of type "Web application". Use your own
+#    test client, not the production one.
+# 2. Register this exact redirect URI on it: your APP_URL followed by /auth/callback. Google refuses
+#    the login unless it matches exactly, including the scheme and port.
+#      Common case:  APP_URL=http://localhost:8787
+#                    redirect URI http://localhost:8787/auth/callback
+#      On a VM behind an HTTPS proxy, set APP_URL to the address you open in the browser:
+#                    APP_URL=https://<proxy-host>:8787
+#                    redirect URI https://<proxy-host>:8787/auth/callback
+# 3. Open the site at APP_URL itself. The login cookie belongs to that address, so a login started
+#    from any other address fails.
+# 4. Remove the # from these two lines, fill them in, and restart "npm run dev".
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

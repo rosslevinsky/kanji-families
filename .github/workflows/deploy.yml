@@ -1,0 +1,46 @@
+name: Deploy
+
+# Only main, or someone starting it by hand, can reach the Cloudflare credentials. There is no
+# pull_request trigger: GitHub runs a pull request's own copy of a workflow, so nothing in this file
+# could keep the token from code in that pull request.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Queued, not cancelled, so a deploy never stops halfway through a database migration.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Not in rosslevinsky/kanji-families, which has no secrets. A fork runs this once it has its own.
+    if: github.repository != 'rosslevinsky/kanji-families'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run setup
+      - run: npm test
+      # The credentials are on these two steps only, after everything else has run. Migrations go
+      # first and must keep working with the code still live, since it stays up until the deploy.
+      - name: Apply database migrations
+        run: npm run db:migrate:prod
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

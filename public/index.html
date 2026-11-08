@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kanji Family Drills</title>
+<meta name="theme-color" content="#f3f5f8">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="/theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Shippori+Mincho+B1:wght@800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">形声 · phono-semantic kanji</div>
+    <h1>Kanji Family Drills</h1>
+    <p class="lede">Most kanji past the first few hundred are built from a meaning part and a sound part. Learn the common parts here, then drill them in Practice on a review schedule. Tap any kanji or word for details.</p>
+  </header>
+
+  <p class="notice" id="notice" role="status" hidden></p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-study" data-tab="study" aria-selected="true" aria-controls="study">Study</button>
+    <button class="tab" role="tab" id="tab-practice" data-tab="practice" aria-selected="false" aria-controls="practice">Practice</button>
+    <button class="tab" role="tab" id="tab-history" data-tab="history" aria-selected="false" aria-controls="history">History</button>
+  </div>
+
+  <main>
+    <div id="study" role="tabpanel" aria-labelledby="tab-study">
+      <section class="block">
+        <form id="search-form" class="search" role="search">
+          <label for="search" class="field"><span>Find a kanji or word</span></label>
+          <input id="search" type="search" placeholder="Try 清, “clean”, or “sei”" autocomplete="off" lang="ja">
+        </form>
+        <div id="search-results"></div>
+        <p class="sub">Roughly speaking, about 60% of the 2,136 jōyō kanji contain a sound part. For about a third of all jōyō kanji it still points to the on’yomi, and for about half the meaning part gives a useful category. These are estimates, so treat each clue as a guess to check.</p>
+      </section>
+
+      <section class="block">
+        <h2>Sound families</h2>
+        <p class="note" id="fam-count"></p>
+        <p class="sub">A selection of the most useful sound families, not all of them. Readings are checked against the KANJIDIC dictionary. The big character on each card is the sound part. Every kanji below it is a jōyō kanji that takes its sound from that part. Colors show how well its on'yomi matches. “Test me” quizzes you on one family.</p>
+        <div class="legend">
+          <span><i class="lg-e"></i>Same reading</span>
+          <span><i class="lg-n"></i>Close (same family of sounds)</span>
+          <span><i class="lg-x"></i>Different</span>
+        </div>
+        <div class="families" id="families"></div>
+      </section>
+
+      <section class="block">
+        <h2>Meaning components</h2>
+        <p class="sub">The meaning part usually points to a category, not an exact meaning. These are the ones you will meet most often.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Part</th><th>Points to</th><th>Examples</th></tr></thead>
+            <tbody id="meanings"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Meaning parts that mislead</h2>
+        <div class="traps">
+          <div class="trap"><div class="cell" data-k="特">特</div><p><b>Cow 牛 → “special.”</b> It originally meant a bull. The meaning drifted; the component stayed.</p></div>
+          <div class="trap"><div class="cell" data-k="館">館</div><p><b>Food 食 → “hall, building.”</b> It started as a lodging where travelers were fed.</p></div>
+          <div class="trap"><div class="cell" data-k="英">英</div><p><b>Plant 艹 → “excellent, England.”</b> It originally meant a flower or blossom.</p></div>
+          <div class="trap"><div class="cell" data-k="物">物</div><p><b>Cow 牛 → “thing.”</b> Usually explained as a multicolored ox, which came to mean things of every kind.</p></div>
+          <div class="trap"><div class="cell" data-k="頭">頭</div><p><b>頁 “page” → “head.”</b> As a component 頁 means head, not page: <span lang="ja">頭 顔 額</span> head, face, forehead, and <span lang="ja">題</span> title, the head of a text.</p></div>
+          <div class="trap"><div class="cell" data-k="服">服</div><p><b>月 isn’t always flesh → “clothes.”</b> In 服 (and 前) the 月 started as 舟, a boat. The two shapes merged over time.</p></div>
+          <div class="trap"><div class="cell" data-k="猫">猫</div><p><b>Dog 犭 → “cat.”</b> 犭 marks animals in general: 猫 cat, 猿 monkey, and 獲 obtain, which began as catching game.</p></div>
+          <div class="trap"><div class="cell" data-k="神">神</div><p><b>礻 altar is not 衤 clothing.</b> They differ by one stroke. 礻 is worship: <span lang="ja">神 社 祝</span> god, shrine, celebrate. 衤 is clothing: <span lang="ja">補 複 被</span> mend, double, suffer.</p></div>
+          <div class="trap"><div class="cell" data-k="都">都</div><p><b>阝 on the left is a hill; on the right it’s a town.</b> Left: <span lang="ja">陸 階 防</span> land, stairs, defend. Right: <span lang="ja">都 部 郊</span> capital, section, suburbs.</p></div>
+          <div class="trap"><div class="cell" data-k="経">経</div><p><b>Thread 糸 → “pass through, manage.”</b> It first meant the warp threads on a loom. 統 govern and 約 promise also grew out of thread words.</p></div>
+          <div class="trap"><div class="cell" data-k="算">算</div><p><b>Bamboo 竹 → “calculate.”</b> Counting rods and writing slips were bamboo, hence <span lang="ja">算 第 等 簡</span> calculate, order, rank, simple.</p></div>
+          <div class="trap"><div class="cell" data-k="費">費</div><p><b>Shell 貝 → “spend.”</b> Cowrie shells were early money, so 貝 appears in <span lang="ja">費 貯 貨 賃</span> expense, save, goods, wages.</p></div>
+          <div class="trap"><div class="cell" data-k="零">零</div><p><b>Rain 雨 → “zero.”</b> It first meant a light, falling rain, then scraps or fractions, then zero.</p></div>
+        </div>
+      </section>
+    </div>
+
+    <div id="practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+      <section class="block">
+        <div class="modes" id="modes" role="group" aria-label="Quiz type"></div>
+        <div class="score" id="score"></div>
+        <div id="stage"></div>
+      </section>
+    </div>
+
+    <div id="history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <section class="block">
+        <h2>Your progress</h2>
+        <p class="status" id="status"></p>
+        <div id="account"></div>
+        <div class="tbl-wrap"><table class="htable">
+          <thead><tr><th>Quiz type</th><th class="num">Accuracy</th><th class="num">Due now</th><th class="num">Started</th><th class="num">Learned</th></tr></thead>
+          <tbody id="hist-modes"></tbody></table></div>
+        <p class="note">“Learned” means answered right at least four times in a row, so the next review is two weeks or more away.</p>
+      </section>
+      <section class="block">
+        <h2>Past tests</h2>
+        <div id="hist-tests"></div>
+      </section>
+      <section class="block">
+        <h2>Kanji to review</h2>
+        <p class="sub">Kanji you have missed, most missed first.</p>
+        <div id="hist-review"></div>
+      </section>
+      <section class="block">
+        <h2>Recent answers</h2>
+        <div id="hist-log"></div>
+      </section>
+      <section class="block">
+        <h2>Backup</h2>
+        <p class="sub">Save your history as a file, or restore it from one. Restoring replaces what’s here now.</p>
+        <div id="backup"></div>
+      </section>
+      <section class="block" id="clear-block"></section>
+    </div>
+  </main>
+    <footer class="site-foot">
+      <p>This site uses the <a href="https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project">JMdict/EDICT</a> and <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project">KANJIDIC</a> dictionary files, the property of the <a href="https://www.edrdg.org/">Electronic Dictionary Research and Development Group</a>, under the Group's <a href="https://www.edrdg.org/edrdg/licence.html">license</a>. <a href="/credits">Credits and licenses</a> · <a href="/privacy">Privacy</a></p>
+      <div class="theme-pick">
+        <span id="theme-label">Theme</span>
+        <div class="seg" role="group" aria-labelledby="theme-label">
+          <button type="button" data-theme-choice="auto" aria-pressed="true">Match device</button>
+          <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+    </footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" id="sheet"></div>
+</div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "kanji-families",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-01",
+  // Everything else is a static file, served without running the Worker.
+  "assets": { "directory": "./public", "run_worker_first": ["/api/*", "/auth/*"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kanji-families",
+      "database_id": "REPLACE-WITH-YOUR-D1-DATABASE-ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Public values only. Secrets are set on the Worker, and .dev.vars overrides these locally.
+  "vars": {
+    "APP_URL": "https://your-domain.example.com",
+    "GOOGLE_CLIENT_ID": "REPLACE-WITH-YOUR-GOOGLE-CLIENT-ID.apps.googleusercontent.com"
+  },
+  // No stored Worker logs. The privacy page lists what is kept, and logs are not on it.
+  "observability": { "enabled": false },
+  // The site is only served from its own domain, never from a Cloudflare test address.
+  "workers_dev": false,
+  "preview_urls": false,
+  // Local servers pass --infer-origin-from-routes=false, or wrangler dev would show this address
+  // to the Worker instead of the local one, and every local login would be refused.
+  "routes": [{ "pattern": "your-domain.example.com", "custom_domain": true }]
+}
