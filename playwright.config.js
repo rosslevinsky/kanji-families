@@ -8,7 +8,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: 'list',
-  use: { baseURL: BASE_URL, trace: 'retain-on-failure' },
+  // Service workers are off, so each test's routes see every request. offline-app.spec.js turns
+  // them on to test the offline copy.
+  use: { baseURL: BASE_URL, trace: 'retain-on-failure', serviceWorkers: 'block' },
   // desktop and mobile run everywhere, in Chromium. The others run in test:e2e:browsers, which only
   // the public repo's CI runs, since Actions minutes are free there.
   projects: [

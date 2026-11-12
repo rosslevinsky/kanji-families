@@ -7,8 +7,9 @@ kanji, and drills them on a review schedule.
 
 Try it at **[kanjifamilies.speedytuna.com](https://kanjifamilies.speedytuna.com)**. It works on
 a phone, and you can add it to your home screen or install it from the browser menu to open it
-like an app. It follows your device's light or dark setting, or you can pick one at the bottom
-of the page.
+like an app. After the first visit it also opens and drills with no connection, and syncs once
+you're back online. It follows your device's light or dark setting, or you can pick one at the
+bottom of the page.
 
 ## What's in this repo
 

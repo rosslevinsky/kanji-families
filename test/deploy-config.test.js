@@ -88,8 +88,9 @@ describe('verify.yml', () => {
       expect(job(name)).toMatch(/needs: tested\n {4}if: always\(\) && needs\.tested\.outputs\.already != 'true'/);
     }
     expect(job('test')).toContain('name=tested-tree-$t');
-    expect(job('tested')).toContain('RECEIPT: tested-tree');
+    expect(job('tested')).toMatch(/uses: \.\/\.github\/actions\/kit\/ci-skip\n {8}with:\n {10}workflow: verify\.yml\n {10}receipt: tested-tree\n/);
     expect(job('gitleaks')).not.toContain('needs:');
+    expect(job('gitleaks')).toMatch(/uses: \.\/\.github\/actions\/kit\/gitleaks\n {8}with:\n {10}mode: history\n/);
     const gate = job('gate');
     expect(gate).toMatch(/needs: \[tested, test, browsers, gitleaks\]\n {4}if: always\(\)/);
     expect(gate).toContain('[ "${{ needs.test.result }}" = "$want" ] || exit 1');

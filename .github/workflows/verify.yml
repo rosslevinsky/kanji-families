@@ -22,14 +22,12 @@ jobs:
   # Has this exact tree of files already passed? A push to main is usually a merge, and the pull
   # request behind it tested the same files minutes earlier: the commit is new, the tree is not.
   #
-  # The claim needs three things: a candidate commit with the same tree, a successful run of this
-  # workflow at it, and that run's own record (the receipt `test` uploads) that it checked out
-  # this tree. A pull request run tests the merge of head and base, not the head, so a green run
-  # at the head proves this tree only if its receipt names it.
-  #
-  # The candidates are a merge commit's second parent and the head of the pull request this
-  # commit closed, which covers merge and squash merges. Anything that fails to answer counts as
-  # "not proved", and the tests run.
+  # The vendored ci-skip action answers. It needs a candidate commit with the same tree (a merge
+  # commit's second parent, or the head of the pull request this commit closed), a successful
+  # run of this workflow at it, and that run's own record (the receipt `test` uploads) that it
+  # checked out this tree. A pull request run tests the merge of head and base, not the head, so
+  # a green run at the head proves this tree only if its receipt names it. Anything that fails to
+  # answer counts as "not proved", and the tests run.
   tested:
     # A pull request's merge tree can equal its head while the head is exactly what hasn't been
     # tested, so the question is only asked on a push.
@@ -45,47 +43,17 @@ jobs:
     outputs:
       already: ${{ steps.proved.outputs.already }}
     steps:
+      # A local action is read from the checkout. The action checks its own copy against its
+      # lock, then checks out this commit and its parents itself.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          fetch-depth: 2
           persist-credentials: false
       - name: Look for a green run of this tree
         id: proved
-        env:
-          GH_TOKEN: ${{ github.token }}
-          WORKFLOW: verify.yml
-          RECEIPT: tested-tree
-        run: |
-          tree=$(git rev-parse "HEAD^{tree}")
-          echo "this tree: $tree"
-          second=$(git rev-parse --verify --quiet "HEAD^2" || true)
-          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-                   --jq '.[].head.sha' 2>/dev/null || true)
-          for candidate in $second $head; do
-            candidate_tree=$(gh api "repos/$GITHUB_REPOSITORY/commits/$candidate" \
-                               --jq '.commit.tree.sha' 2>/dev/null) || continue
-            if [ "$candidate_tree" != "$tree" ]; then
-              echo "$candidate: different tree ($candidate_tree)"
-              continue
-            fi
-            run=$(gh api \
-              "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW/runs?head_sha=$candidate&status=success&per_page=1" \
-              --jq '.workflow_runs[0].id // empty' 2>/dev/null) || continue
-            if [ -z "$run" ]; then
-              echo "$candidate: same tree, no green run of $WORKFLOW"
-              continue
-            fi
-            if gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$run/artifacts" \
-                 --jq '.artifacts[].name' 2>/dev/null | grep -qxF "$RECEIPT-$tree"; then
-              echo "already=true" >> "$GITHUB_OUTPUT"
-              echo "$candidate: run $run checked out this exact tree and was green" \
-                | tee -a "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            echo "$candidate: green run $run carries no $RECEIPT-$tree receipt"
-          done
-          echo "already=false" >> "$GITHUB_OUTPUT"
-          echo "no commit with this tree has a green run; the tests run" | tee -a "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/kit/ci-skip
+        with:
+          workflow: verify.yml
+          receipt: tested-tree
 
   test:
     # `always()` lets a pull request through, where `tested` is skipped; without it a skipped
@@ -139,30 +107,20 @@ jobs:
       - run: npx playwright install --with-deps firefox webkit
       - run: npm run test:e2e:browsers
 
-  # Runs on every event: a merge adds commits to the history, and this reads all of it. One
-  # version, checked against the checksum its project publishes, so a new gitleaks can't change
-  # this result or reach the runner unnoticed.
+  # Runs on every event: a merge adds commits to the history, and this reads all of it. The
+  # vendored gitleaks action installs one pinned version, checked against the checksum its
+  # project publishes, so a new gitleaks can't change this result or reach the runner unnoticed.
+  # It ignores inline `gitleaks:allow` comments, so nothing scanned can excuse itself.
   gitleaks:
     runs-on: ubuntu-latest
-    env:
-      GITLEAKS_VERSION: 8.30.1
-      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Fetch the pinned gitleaks
-        run: |
-          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          dir="$(mktemp -d)"
-          curl -fsSL -o "$dir/$archive" \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
-          echo "$GITLEAKS_SHA256  $dir/$archive" | sha256sum -c -
-          tar -xzf "$dir/$archive" -C "$dir" gitleaks
-          echo "$dir" >> "$GITHUB_PATH"
       - name: No secrets in the full history
-        run: gitleaks git . --no-banner --redact --exit-code 1
+        uses: ./.github/actions/kit/gitleaks
+        with:
+          mode: history
 
   # The one check that stands for every job above, for a branch rule to require. A skip counts
   # as green only where this workflow chose it: the tree was already proved, or the repo is

@@ -226,6 +226,21 @@ function dueCands(mode) {
     .sort((a, b) => srsOf(mode, a.key).b - srsOf(mode, b.key).b || srsOf(mode, a.key).d - srsOf(mode, b.key).d);
 }
 function newCands(mode) { return CANDS[mode].filter(c => !srsOf(mode, c.key)); }
+// The first n new ones, one family at a time in a random order of families, so a test doesn't
+// hold several kanji with the same reading. Within a family, the data's order stands.
+function spreadNew(mode, n) {
+  const groups = new Map();
+  for (const c of newCands(mode)) {
+    const g = c.fam || c;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(c);
+  }
+  const order = shuffle([...groups.values()]), out = [];
+  for (let i = 0; out.length < n && order.some(g => i < g.length); i++) {
+    for (const g of order) if (i < g.length && out.length < n) out.push(g[i]);
+  }
+  return out;
+}
 function nextDue(mode) {
   let min = Infinity;
   CANDS[mode].forEach(c => { const s = srsOf(mode, c.key); if (s && s.d < min) min = s.d; });
@@ -370,6 +385,7 @@ function showTab(name) {
   });
   if (name === 'history') renderHistory();
   if (name === 'practice') renderStage();
+  else testChrome();
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.tab));
 
@@ -525,8 +541,17 @@ function wsample(items, n) {
 // ---------- tests ----------
 let mode = 'reading';
 const tests = {}; Object.keys(MODES).forEach(m => tests[m] = null);
-let setup = { len: 20, focus: 'due' };
-try { const s = JSON.parse(localStorage.getItem('kfd-setup') || 'null'); if (s && [10, 20, 30].includes(s.len)) setup = {len: s.len, focus: ['due', 'mixed', 'weak'].includes(s.focus) ? s.focus : 'due'}; } catch (e) {}
+let setup = { len: 20, focus: 'due', fam: FAMILIES[0].head };
+try {
+  const s = JSON.parse(localStorage.getItem('kfd-setup') || 'null');
+  if (s && [10, 20, 30].includes(s.len)) setup = {
+    len: s.len,
+    focus: ['due', 'mixed', 'weak', 'family'].includes(s.focus) ? s.focus : 'due',
+    fam: FAMILIES.some(f => f.head === s.fam) ? s.fam : FAMILIES[0].head
+  };
+} catch (e) {}
+// Only the reading quiz is built around families, so another quiz type falls back to the schedule.
+const focusIn = m => setup.focus === 'family' && m !== 'reading' ? 'due' : setup.focus;
 let streak = 0;
 const FOCUS_NAMES = {due: 'Review', mixed: 'Mixed', weak: 'Weak spots', family: 'Family'};
 
@@ -537,11 +562,11 @@ function makeTest(focus, len, onlyKeys, label) {
     picks = shuffle(all.filter(c => onlyKeys.includes(c.key)));
   } else if (focus === 'due') {
     const due = dueCands(mode).slice(0, len);
-    const fresh = newCands(mode).slice(0, len - due.length);
-    picks = shuffle(due).concat(fresh);
+    const fresh = spreadNew(mode, len - due.length);
+    picks = shuffle(due.concat(fresh));
     if (picks.length < len) {
       const extra = wsample(all.filter(c => !picks.includes(c)), len - picks.length);
-      picks = picks.concat(extra);
+      picks = shuffle(picks.concat(extra));
       note = `${due.length} due for review and ${fresh.length} new. The other ${extra.length} lean toward kanji you miss, as extra practice that won’t change your schedule much.`;
     } else note = `${due.length} due for review${fresh.length ? `, ${fresh.length} new` : ''}.`;
   } else if (focus === 'weak') {
@@ -567,11 +592,13 @@ function setMode(m) {
   mode = m; streak = 0;
   document.querySelectorAll('.mode').forEach(x => x.setAttribute('aria-pressed', x.dataset.mode === m));
 }
+const familyTest = f => makeTest('family', f.members.length, f.members.map(m => m.k), `Family ${f.head}`);
 function startFamilyTest(head) {
   const f = FAMILIES.find(x => x.head === head);
   if (!f) return;
   setMode('reading');
-  tests.reading = makeTest('family', f.members.length, f.members.map(m => m.k), `Family ${head}`);
+  picking = false;
+  tests.reading = familyTest(f);
   showTab('practice');
   try { window.scrollTo({top: 0}); } catch (e) {}
 }
@@ -589,6 +616,23 @@ function renderStage() {
   else if (t.view === 'list') renderResults();
   else renderQuestion();
   renderScore();
+  testChrome();
+}
+
+// While a test is open, the intro and the quiz list give way to one line, so on a phone the
+// question starts near the top. Each quiz type keeps its own test, so changing type loses nothing.
+let picking = false;
+function testChrome() {
+  const inTest = !$('#practice').hidden && !!T() && !picking;
+  document.body.classList.toggle('in-test', inTest);
+  $('#modes').hidden = inTest;
+  const bar = $('#test-bar');
+  bar.hidden = !inTest;
+  bar.innerHTML = inTest ? `<b>${esc(MODES[mode].name)}</b> <button class="linkbtn" id="change-mode">Change quiz type</button>` : '';
+  if (inTest) $('#change-mode').onclick = () => {
+    picking = true; testChrome();
+    $('#modes .mode[aria-pressed="true"]').focus();
+  };
 }
 
 function renderSetup() {
@@ -603,26 +647,39 @@ function renderSetup() {
     mixed: 'Drawn from everything, but kanji and sound families you miss come up more often.',
     weak: `Only ones you’ve missed and not yet mastered. You have ${weakCount} in this quiz type right now.`
   };
+  const focus = focusIn(mode);
+  const fam = FAMILIES.find(f => f.head === setup.fam);
+  if (focus === 'family') notes.family = `All ${fam.members.length} kanji with the sound part ${fam.head}, which reads ${fam.on} (${esc(fam.ro)}).`;
   $('#stage').innerHTML = `
     <div class="setup">
-      <div><h2>New test: ${M.name}</h2><p class="note">${esc(M.blurb)}</p></div>
-      ${M.fixedLen ? '' : `<div class="field"><span>Length</span>
+      <div><h2>New test: ${M.name}</h2></div>
+      ${M.fixedLen || focus === 'family' ? '' : `<div class="field"><span>Length</span>
         <div class="seg" id="seg-len">${[10, 20, 30].map(n => `<button data-v="${n}" aria-pressed="${setup.len === n}">${n} questions</button>`).join('')}</div>
       </div>`}
       <div class="field"><span>Questions</span>
         <div class="seg" id="seg-focus">
-          <button data-v="due" aria-pressed="${setup.focus === 'due'}">Review schedule${dueCount ? ` (${dueCount} due)` : ''}</button>
-          <button data-v="mixed" aria-pressed="${setup.focus === 'mixed'}">Mixed</button>
-          <button data-v="weak" aria-pressed="${setup.focus === 'weak'}">Weak spots only</button>
+          <button data-v="due" aria-pressed="${focus === 'due'}">Review schedule${dueCount ? ` (${dueCount} due)` : ''}</button>
+          <button data-v="mixed" aria-pressed="${focus === 'mixed'}">Mixed</button>
+          <button data-v="weak" aria-pressed="${focus === 'weak'}">Weak spots only</button>
+          ${mode === 'reading' ? `<button data-v="family" aria-pressed="${focus === 'family'}">One family</button>` : ''}
         </div>
-        <p class="note">${notes[setup.focus]}</p>
+        ${focus === 'family' ? `<label class="fam-pick"><span>Family</span>
+          <select id="fam-pick">${FAMILIES.map(f => `<option value="${f.head}"${f.head === fam.head ? ' selected' : ''}>${f.head} ${f.on} (${esc(f.ro)}) · ${esc(f.gloss)}</option>`).join('')}</select>
+        </label>` : ''}
+        <p class="note">${notes[focus]}</p>
       </div>
       <div><button class="navbtn primary" id="start">Start test</button></div>
     </div>`;
   const save = () => { try { localStorage.setItem('kfd-setup', JSON.stringify(setup)); } catch (e) {} };
   document.querySelectorAll('#seg-len button').forEach(b => b.onclick = () => { setup.len = +b.dataset.v; save(); renderSetup(); });
   document.querySelectorAll('#seg-focus button').forEach(b => b.onclick = () => { setup.focus = b.dataset.v; save(); renderSetup(); });
-  $('#start').onclick = () => { tests[mode] = makeTest(setup.focus, M.fixedLen || setup.len); streak = 0; renderStage(); };
+  const pick = $('#fam-pick');
+  if (pick) pick.onchange = () => { setup.fam = pick.value; save(); renderSetup(); };
+  $('#start').onclick = () => {
+    tests[mode] = focus === 'family' ? familyTest(fam) : makeTest(focus, M.fixedLen || setup.len);
+    streak = 0; picking = false; renderStage();
+    window.scrollTo({top: 0});
+  };
 }
 
 function renderQuestion() {
@@ -772,8 +829,11 @@ function answer(key) {
   });
 }
 
-$('#modes').innerHTML = Object.entries(MODES).map(([k, v]) => `<button class="mode" data-mode="${k}" aria-pressed="${k === mode}">${v.name}</button>`).join('');
-document.querySelectorAll('.mode').forEach(b => b.onclick = () => { setMode(b.dataset.mode); renderStage(); });
+$('#modes').innerHTML = Object.entries(MODES).map(([k, v]) => `
+  <button class="mode" data-mode="${k}" aria-pressed="${k === mode}" aria-label="${esc(v.name)}" aria-describedby="mode-${k}">
+    <span class="mode-name">${esc(v.name)}</span><span class="mode-blurb" id="mode-${k}">${esc(v.blurb)}</span>
+  </button>`).join('');
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => { picking = false; setMode(b.dataset.mode); renderStage(); });
 
 document.addEventListener('keydown', e => {
   if (!$('#overlay').hidden) { if (e.key === 'Escape') closeDetail(); return; }
@@ -860,7 +920,11 @@ async function signOut(force) {
 // The block is rebuilt freely, so its buttons are handled here rather than one by one.
 $('#account').addEventListener('click', async e => {
   const id = e.target.id;
-  if (id === 'sign-in-google') window.location.assign('/auth/login');
+  // Offline, the sign-in page can't load, and an installed app has no back button to return.
+  if (id === 'sign-in-google') {
+    if (navigator.onLine === false) showNotice('offline_sign_in');
+    else window.location.assign('/auth/login');
+  }
   else if (id === 'sign-in-dev') sync.devSignIn();
   else if (id === 'sign-out') signOut(false);
   else if (id === 'sign-out-cancel') setAccountStep(null);
@@ -881,6 +945,7 @@ const NOTICES = {
   delete_done: 'Your saved progress was deleted from your account and this browser.',
   generation: 'Your history was cleared or restored on another device, so the test in progress ended.',
   login_failed: 'Signing in didn’t work. Please try again.',
+  offline_sign_in: 'You’re offline. Sign in once you’re connected again. Your progress is saved in this browser meanwhile.',
   sign_out_failed: 'Couldn’t reach the site, so you’re still signed in. Nothing was removed. Please try again.',
   delete_failed: 'Couldn’t delete your data just now. Nothing was removed. Please try again.',
   delete_needs_session: 'Your sign-in has ended. Sign in again to delete your data.',
@@ -1117,3 +1182,6 @@ renderHistory();
 showLoginError();
 // Never waited for: the page above already works from the browser copy.
 sync.start();
+// Keeps a copy of the site's files so it opens offline (see sw.js). A browser without it, or one
+// that refuses, works as before.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});

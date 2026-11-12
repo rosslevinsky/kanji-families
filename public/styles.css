@@ -142,12 +142,27 @@ td.ex { display: flex; flex-wrap: wrap; gap: 4px; }
 .trap p { min-width: 0; }
 
 /* practice */
-.modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.modes { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 640px) { .modes { grid-template-columns: 1fr 1fr; } }
 .mode {
-  font-weight: 500; cursor: pointer; padding: 8px 14px; border-radius: 999px;
-  border: 1.5px solid var(--grid); background: var(--card);
+  display: grid; gap: 2px; align-content: start; text-align: left; cursor: pointer;
+  padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--grid); background: var(--card);
 }
+.mode-name { font-weight: 600; }
+.practice-head { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: baseline; }
+.test-bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+body.in-test header .eyebrow, body.in-test header .lede { display: none; }
+body.in-test header { margin-bottom: 12px; }
+body.in-test h1 { font-size: clamp(26px, 4vw, 32px); }
+.mode-blurb { font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
 .mode[aria-pressed="true"] { background: var(--indigo); border-color: var(--indigo); color: var(--paper); }
+.mode[aria-pressed="true"] .mode-blurb { color: var(--paper); opacity: .85; }
+.fam-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 360px; }
+.fam-pick > span { font-size: 13px; color: var(--ink-soft); }
+.fam-pick select {
+  width: 100%; min-width: 0; font: inherit; padding: 8px 10px; border-radius: 6px; border: 1.5px solid var(--grid);
+  background: var(--paper); color: var(--ink);
+}
 .score { display: flex; gap: 18px; font-size: 14px; color: var(--ink-soft); font-variant-numeric: tabular-nums; flex-wrap: wrap; align-items: center; }
 .score b { color: var(--ink); }
 .linkbtn { font-size: 13px; background: none; border: 0; color: var(--indigo); cursor: pointer; text-decoration: underline; padding: 0; }
@@ -166,6 +181,8 @@ td.ex { display: flex; flex-wrap: wrap; gap: 4px; }
 .big { width: 150px; height: 150px; font-size: 104px; border-width: 2px; }
 .hintrow { min-height: 22px; font-size: 14px; color: var(--ink-soft); text-align: center; }
 .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 520px; }
+/* A wide screen has room for the answers in one row, which keeps them above the fold. */
+@media (min-width: 760px) { .opts { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 860px; } }
 .opt {
   cursor: pointer; text-align: center; padding: 12px 10px; border-radius: 6px;
   border: 1.5px solid var(--grid); background: var(--paper); display: grid; gap: 2px; min-width: 0;

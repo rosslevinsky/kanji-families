@@ -80,6 +80,8 @@ test('practice: every quiz type gives a question', async ({ page }) => {
     ['Odd one out', 'Which one has a different on’yomi?'],
     ['Meaning component', 'Which category does its meaning part point to?'],
   ]) {
+    // A test in progress hides the list until it is asked for.
+    if (await page.locator('#test-bar').isVisible()) await page.getByRole('button', { name: 'Change quiz type' }).click();
     await page.locator('#modes').getByRole('button', { name, exact: true }).click();
     await page.locator('#start').click();
     await expect(page.locator('.prompt')).toHaveText(prompt);
@@ -99,6 +101,78 @@ test('practice: a whole test is scored and recorded in History', async ({ page }
   await expect(page.locator('#hist-tests .log-row b')).toHaveText(`${right}/10`);
   await expect(page.locator('#hist-log .log-row')).toHaveCount(10);
   await expect(page.locator('#hist-modes tr').first().locator('td').nth(3)).toHaveText(/^10 \/ \d+$/);
+});
+
+test('new kanji come from different families, so a test doesn’t give away the reading', async ({ page }) => {
+  const { DATA } = await import('../../public/data.js');
+  const familyOf = new Map(DATA.families.flatMap((f) => f.members.map((m) => [m.k, f.head])));
+  await page.getByRole('tab', { name: 'Practice' }).click();
+  await page.locator('#seg-len').getByRole('button', { name: '20 questions' }).click();
+  await page.locator('#start').click();
+  const families = [];
+  for (let i = 0; i < 20; i++) {
+    await expect(page.locator('.pos')).toContainText(`Question ${i + 1} of 20`);
+    families.push(familyOf.get(await page.locator('#qcard .cell.big').textContent()));
+    await page.locator('#qcard .opt').first().click();
+    await page.locator('#next').click();
+  }
+  expect(families).not.toContain(undefined);
+  expect(new Set(families).size).toBe(20);
+});
+
+test('practice: quiz types are listed with what each one asks, in even rows', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Practice' }).click();
+  const modes = page.locator('#modes .mode');
+  await expect(modes).toHaveCount(5);
+  await expect(page.locator('#modes').getByRole('button', { name: 'Odd one out', exact: true }))
+    .toHaveAccessibleDescription('Four kanji share a sound part. Find the one that reads differently.');
+  const boxes = await modes.evaluateAll((els) => els.map((e) => e.getBoundingClientRect()));
+  expect(new Set(boxes.map((b) => Math.round(b.width))).size).toBe(1);
+  const perRow = boxes.filter((b) => Math.round(b.top) === Math.round(boxes[0].top)).length;
+  expect(perRow).toBe(page.viewportSize().width >= 640 ? 2 : 1);
+});
+
+test('practice: one family can be drilled from Practice, and the choice is remembered', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Practice' }).click();
+  await page.locator('#seg-focus').getByRole('button', { name: 'One family' }).click();
+  await expect(page.locator('#seg-len')).toHaveCount(0);
+  await page.getByLabel('Family').selectOption('同');
+  await expect(page.locator('.setup .note').last()).toContainText('4 kanji');
+  await page.reload();
+  await page.getByRole('tab', { name: 'Practice' }).click();
+  await expect(page.getByLabel('Family')).toHaveValue('同');
+  await page.locator('#start').click();
+  await expect(page.locator('.pos')).toContainText('Family 同 · Question 1 of 4');
+
+  // Only the reading quiz is built around families.
+  await page.getByRole('button', { name: 'Change quiz type' }).click();
+  await page.locator('#modes').getByRole('button', { name: 'Read the word', exact: true }).click();
+  await expect(page.locator('#seg-focus').getByRole('button', { name: 'One family' })).toHaveCount(0);
+  await expect(page.locator('#seg-focus [aria-pressed="true"]')).toHaveText(/Review schedule/);
+});
+
+test('practice: during a test the question sits near the top, and the quiz list comes back on request', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Practice' }).click();
+  await page.locator('#start').click();
+  await expect(page.locator('#modes')).toBeHidden();
+  await expect(page.locator('header .lede')).toBeHidden();
+  // Every answer is on screen without scrolling, on a phone and on a 720-pixel-tall desktop.
+  const bottom = await page.locator('#qcard .opt').last().evaluate((e) => e.getBoundingClientRect().bottom);
+  expect(bottom).toBeLessThanOrEqual(page.viewportSize().height);
+  await page.locator('#qcard .opt').first().click();
+  await page.locator('#next').click();
+  await expect(page.locator('.pos')).toContainText('Question 2 of');
+
+  await page.getByRole('button', { name: 'Change quiz type' }).click();
+  await page.locator('#modes').getByRole('button', { name: 'Read the word', exact: true }).click();
+  await expect(page.locator('#modes')).toBeVisible();
+  await expect(page.locator('#start')).toBeVisible();
+  await page.locator('#modes').getByRole('button', { name: 'Sound → reading', exact: true }).click();
+  await expect(page.locator('#modes')).toBeHidden();
+  await expect(page.locator('.pos')).toContainText('Question 2 of');
+
+  await page.getByRole('tab', { name: 'Study' }).click();
+  await expect(page.locator('header .lede')).toBeVisible();
 });
 
 test('family test from a Test me button', async ({ page }) => {

@@ -139,6 +139,28 @@ describe('installing the app', () => {
   });
 });
 
+describe('offline copy', () => {
+  const worker = page('sw.js');
+  const listed = JSON.parse(worker.match(/const FILES = (\[[\s\S]*?\]);/)[1].replace(/'/g, '"').replace(/,\s*\]/, ']'));
+  // Pages are served without their .html, and _headers is read by Cloudflare, never by a browser.
+  const served = files.map((f) => f.slice(ROOT.length + 1))
+    .filter((name) => name !== '_headers' && name !== 'sw.js')
+    .map((name) => (name === 'index.html' ? '/' : `/${name.replace(/\.html$/, '')}`));
+
+  it('lists every file the site serves, and nothing else', () => {
+    expect([...listed].sort()).toEqual([...served].sort());
+  });
+
+  it('never copies the API or sign-in', () => {
+    expect(worker).toContain("url.pathname.startsWith('/api/')");
+    expect(worker).toContain("url.pathname.startsWith('/auth/')");
+  });
+
+  it('is started by the app', () => {
+    expect(page('app.js')).toContain("navigator.serviceWorker.register('/sw.js')");
+  });
+});
+
 describe('theme', () => {
   it.each(PAGES)('%s sets the saved theme before the styles load, so it never flashes', (name) => {
     const html = page(name);

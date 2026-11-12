@@ -28,11 +28,12 @@ no server code at all, which is enough for many artifacts.
 7. [Stage 6: tests](#stage-6-tests)
 8. [Stage 7: deploy from GitHub](#stage-7-deploy-from-github)
 9. [Stage 8: real sign-in with Google](#stage-8-real-sign-in-with-google)
-10. [Free-plan limits](#free-plan-limits)
-11. [Data licenses](#data-licenses)
-12. [Before you make the repository public](#before-you-make-the-repository-public)
-13. [Pitfalls we hit](#pitfalls-we-hit)
-14. [Wrangler and the new `cf` tool](#wrangler-and-the-new-cf-tool)
+10. [Stage 9: install it and use it offline](#stage-9-install-it-and-use-it-offline)
+11. [Free-plan limits](#free-plan-limits)
+12. [Data licenses](#data-licenses)
+13. [Before you make the repository public](#before-you-make-the-repository-public)
+14. [Pitfalls we hit](#pitfalls-we-hit)
+15. [Wrangler and the new `cf` tool](#wrangler-and-the-new-cf-tool)
 
 ## What you need
 
@@ -800,6 +801,51 @@ Most work doesn't need it, because the fake sign-in covers the same code paths a
 you do: make a **separate** Google client for testing, register
 `http://localhost:8787/auth/callback`, and put its ID and secret in `.dev.vars`.
 `.dev.vars.example` explains each line, including what to do behind an HTTPS proxy.
+
+## Stage 9: install it and use it offline
+
+Two separate pieces. Installing changes how the app opens; working offline changes where its
+files come from.
+
+- **Install:** [`public/manifest.webmanifest`](../public/manifest.webmanifest) names the app,
+  its colors and its icons, and `"display": "standalone"` opens it in its own window with no
+  address bar. Each page links it in `<head>`, along with an `apple-touch-icon` for iPhones,
+  which ignore the manifest's icons. The security policy in `public/_headers` needs
+  `manifest-src 'self'`.
+- **Offline:** a service worker, [`public/sw.js`](../public/sw.js), keeps a copy of the site's own
+  files in the browser. The app registers it once it has drawn the page, so a browser without
+  one works as before.
+
+Choices worth copying from `sw.js`:
+
+- **Network first.** Online, pages and files come from the server, so a deploy shows on the next
+  launch. The copy answers only when the network fails, or doesn't deliver a whole file within a
+  few seconds. Time the whole download, not just the start of the answer, or a connection that
+  drops mid-file hangs the page. The common alternative, copy first, makes every update wait for
+  a second launch.
+- **Replace the copy whole, from one version.** Refreshing each file as it passes leaves a new
+  `app.js` beside an old `sync.js` after a deploy on a flaky connection, and that mix then breaks
+  every offline launch. `sw.js` fetches the full list into a new set after each launch, then asks
+  the server for each file's version tag (its `ETag`) once more. If a deploy landed meanwhile, a
+  tag differs and the set is dropped. Only a set that passes is marked complete, and only then
+  do older ones go.
+- **One version per page.** A page from the copy takes every file from the same set, and a page
+  from the network takes every file from the network.
+- **Several copies of the worker can run at once,** for example during an update. Each deletes
+  only older complete sets, and unfinished ones only once they are old enough to be abandoned.
+- **Never copy `/api` or `/auth`.** Progress already lives in the page's storage. A copied API
+  answer would show stale progress, and a copied sign-in step would break sign-in.
+- **List the files.** A unit test in `test/static.test.js` checks that the worker's list matches
+  what `public/` serves, so a new file can't be left out of the copy.
+- **Sign-in needs the network.** Offline, the Google button shows a message rather than
+  navigating away. An installed app has no back button, so a failed page load strands the user.
+
+Fonts from other sites aren't copied. Offline, the pages use the device's own fonts.
+
+In browser tests, turn service workers off for every spec but the one that tests them, with
+`serviceWorkers: 'block'` in `playwright.config.js`: a page controlled by a worker hides some
+requests from the test's routes. Playwright's offline switch reaches the worker only in
+Chromium, so the tests that cut the connection run there only.
 
 ## Free-plan limits
 
